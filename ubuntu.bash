@@ -7,65 +7,112 @@ SSH_DIR="$HOME/.ssh"
 CONFIG_DIR="$HOME/.config"
 ZSH_CUSTOM="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
 
-# -------- Install packages -------- #
-echo "[*] Installing kitty, neovim, and zsh..."
-if command -v apt &>/dev/null; then
-  sudo apt update
-  sudo apt install -y kitty neovim zsh git curl
-elif command -v dnf &>/dev/null; then
-  sudo dnf install -y kitty neovim zsh git curl
-elif command -v pacman &>/dev/null; then
-  sudo pacman -Sy --noconfirm kitty neovim zsh git curl
-else
-  echo "Package manager not supported. Please install dependencies manually."
-  exit 1
-fi
+# -------- Helper Functions -------- #
+install_packages() {
+  echo "[*] Installing kitty, neovim, and zsh..."
+  if command -v apt &>/dev/null; then
+    sudo apt update
+    sudo apt install -y kitty neovim zsh git curl
+  elif command -v dnf &>/dev/null; then
+    sudo dnf install -y kitty neovim zsh git curl
+  elif command -v pacman &>/dev/null; then
+    sudo pacman -Sy --noconfirm kitty neovim zsh git curl
+  else
+    echo "Package manager not supported. Please install dependencies manually."
+    exit 1
+  fi
+}
 
-# -------- Kitty config -------- #
-echo "[*] Setting up kitty config..."
-mkdir -p "$CONFIG_DIR/kitty"
-cp -r "$REPO_DIR/kitty/"* "$CONFIG_DIR/kitty/"
+setup_kitty() {
+  echo "[*] Setting up kitty config..."
+  mkdir -p "$CONFIG_DIR/kitty"
+  cp -r "$REPO_DIR/kitty/"* "$CONFIG_DIR/kitty/"
+}
 
-# -------- Neovim config -------- #
-echo "[*] Setting up nvim config..."
-mkdir -p "$CONFIG_DIR/nvim"
-cp -r "$REPO_DIR/nvim/"* "$CONFIG_DIR/nvim/"
+setup_nvim() {
+  echo "[*] Setting up nvim config..."
+  mkdir -p "$CONFIG_DIR/nvim"
+  cp -r "$REPO_DIR/nvim/"* "$CONFIG_DIR/nvim/"
+}
 
-# -------- Zsh config -------- #
-echo "[*] Setting up zsh..."
-cp "$REPO_DIR/.zshrc" "$HOME/.zshrc"
+setup_zsh() {
+  echo "[*] Setting up zsh..."
+  cp "$REPO_DIR/.zshrc" "$HOME/.zshrc"
 
-# Clone plugins
-mkdir -p "$ZSH_CUSTOM/plugins"
-if [ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]; then
-  git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
-fi
-if [ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]; then
-  git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
-fi
+  # Clone plugins
+  mkdir -p "$ZSH_CUSTOM/plugins"
+  if [ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]; then
+    git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
+  fi
+  if [ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]; then
+    git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
+  fi
+}
 
-# -------- SSH config -------- #
-echo "[*] Setting up SSH config..."
-mkdir -p "$SSH_DIR"
-chmod 700 "$SSH_DIR"
-cp "$REPO_DIR/ssh/config" "$SSH_DIR/config"
-chmod 600 "$SSH_DIR/config"
+setup_ssh() {
+  echo "[*] Setting up SSH config..."
+  mkdir -p "$SSH_DIR"
+  chmod 700 "$SSH_DIR"
+  cp "$REPO_DIR/ssh/config" "$SSH_DIR/config"
+  chmod 600 "$SSH_DIR/config"
+}
 
-# -------- SSH key for GitHub -------- #
-SSH_KEY="$SSH_DIR/id_ed25519_github"
-if [ ! -f "$SSH_KEY" ]; then
-  echo "[*] Generating new SSH key for GitHub..."
-  ssh-keygen -t ed25519 -C "your_email@example.com" -f "$SSH_KEY" -N ""
-  eval "$(ssh-agent -s)"
-  ssh-add "$SSH_KEY"
+setup_ssh_key() {
+  local SSH_KEY="$SSH_DIR/id_ed25519_github"
+  if [ ! -f "$SSH_KEY" ]; then
+    echo "[*] Generating new SSH key for GitHub..."
+    read -rp "Enter your GitHub email: " email
+    ssh-keygen -t ed25519 -C "$email" -f "$SSH_KEY" -N ""
+    eval "$(ssh-agent -s)"
+    ssh-add "$SSH_KEY"
 
-  echo -e "\nHost github.com\n  AddKeysToAgent yes\n  IdentityFile $SSH_KEY" >>"$SSH_DIR/config"
+    echo -e "\nHost github.com\n  AddKeysToAgent yes\n  IdentityFile $SSH_KEY" >>"$SSH_DIR/config"
 
-  echo "[*] SSH key generated. Copy this to GitHub SSH settings:"
-  cat "$SSH_KEY.pub"
-else
-  echo "[*] SSH key already exists: $SSH_KEY"
-fi
+    echo "[*] SSH key generated. Copy this to GitHub SSH settings:"
+    cat "$SSH_KEY.pub"
+  else
+    echo "[*] SSH key already exists: $SSH_KEY"
+  fi
+}
 
-echo "[*] Setup complete!"
+run_all() {
+  install_packages
+  setup_kitty
+  setup_nvim
+  setup_zsh
+  setup_ssh
+  setup_ssh_key
+}
+
+# -------- Menu -------- #
+echo "======================================="
+echo "      ⚙️  Dev Environment Setup"
+echo "======================================="
+echo "Select what you want to install/configure:"
+echo "  1) Install required packages"
+echo "  2) Setup Kitty config"
+echo "  3) Setup Neovim config"
+echo "  4) Setup Zsh config"
+echo "  5) Setup SSH config"
+echo "  6) Generate SSH key for GitHub"
+echo "  7) Run ALL"
+echo "  0) Exit"
+echo "---------------------------------------"
+
+read -rp "Enter your choice: " choice
+
+case $choice in
+  1) install_packages ;;
+  2) setup_kitty ;;
+  3) setup_nvim ;;
+  4) setup_zsh ;;
+  5) setup_ssh ;;
+  6) setup_ssh_key ;;
+  7) run_all ;;
+  0) echo "Exiting..." && exit 0 ;;
+  *) echo "Invalid choice." && exit 1 ;;
+esac
+
+echo
+echo "[*] Done!"
 echo "⚡ Restart terminal or run 'exec zsh' to apply changes."
