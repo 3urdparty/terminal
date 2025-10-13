@@ -35,9 +35,41 @@ setup_nvim() {
   cp -r "$REPO_DIR/nvim/"* "$CONFIG_DIR/nvim/"
 }
 
+setup_terminal_profile(){
+# Create a new profile (returns its UUID)
+PROFILE_ID="default"
+PROFILE_NAME="default"
+
+# Add the new profile to the list
+gsettings set org.gnome.Terminal.ProfilesList list \
+  "$(gsettings get org.gnome.Terminal.ProfilesList list | sed "s/]$/, '$PROFILE_ID']/")"
+
+# Set its visible name
+gsettings set "org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:$PROFILE_ID/" visible-name "$PROFILE_NAME"
+
+# Enable custom font and set it
+gsettings set "org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:$PROFILE_ID/" use-system-font false
+gsettings set "org.gnome.Terminal.Legacy.Profile:/org/gnome/terminal/legacy/profiles:/:$PROFILE_ID/" font 'JetBrainsMono Nerd Font 12'
+
+# (Optional) set as default
+gsettings set org.gnome.Terminal.ProfilesList default "$PROFILE_ID"
+
+}
+
+setup_meslo_fonts(){
+	sudo mkdir -p /usr/local/share/fonts/truetype/custom
+	sudo cp -r "$REPO_DIR/fonts/." /usr/local/share/fonts/truetype/custom/
+	fc-cache -fv
+}
+
 setup_zsh() {
   echo "[*] Setting up zsh..."
-  cp "$REPO_DIR/.zshrc" "$HOME/.zshrc"
+  cp "$REPO_DIR/zshrc" "$HOME/.zshrc"
+  cp "$REPO_DIR/p10k.zsh" "$HOME/.p10k.zsh"
+  cp -r "$REPO_DIR/oh-my-zsh/." "$HOME/.oh-my-zsh/"
+  compaudit | xargs chmod g-w,o-w
+  setup_terminal_profile
+  setup_meslo_fonts
 
   # Clone plugins
   mkdir -p "$ZSH_CUSTOM/plugins"
@@ -53,7 +85,7 @@ setup_ssh() {
   echo "[*] Setting up SSH config..."
   mkdir -p "$SSH_DIR"
   chmod 700 "$SSH_DIR"
-  cp "$REPO_DIR/ssh/config" "$SSH_DIR/config"
+  cp "$REPO_DIR/ssh/ubuntu.config" "$SSH_DIR/config"
   chmod 600 "$SSH_DIR/config"
 }
 
