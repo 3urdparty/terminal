@@ -40,7 +40,8 @@ install_ubuntu() {
 
   # Update + packages
   sudo apt update && sudo apt upgrade -y
-  sudo apt install -y kitty neovim zsh git curl wget
+  sudo apt install -y kitty zsh git curl wget
+  sudo snap install --classic nvim
 }
 
 common_setup() {
@@ -80,15 +81,35 @@ common_setup() {
 
   # Zsh plugins
   mkdir -p "$ZSH_CUSTOM/plugins"
+
+  # Install zsh-autosuggestions if not already installed
   if [ ! -d "$ZSH_CUSTOM/plugins/zsh-autosuggestions" ]; then
     git clone https://github.com/zsh-users/zsh-autosuggestions "$ZSH_CUSTOM/plugins/zsh-autosuggestions"
   else
     echo "[*] zsh-autosuggestions already installed. Skipping..."
   fi
+
+  # Install zsh-syntax-highlighting if not already installed
   if [ ! -d "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting" ]; then
     git clone https://github.com/zsh-users/zsh-syntax-highlighting.git "$ZSH_CUSTOM/plugins/zsh-syntax-highlighting"
   else
     echo "[*] zsh-syntax-highlighting already installed. Skipping..."
+  fi
+
+  # Copy p10k.zsh to home directory if it doesn't already exist
+  if [ ! -f "$HOME/.p10k.zsh" ]; then
+    cp "$ZSH_CUSTOM/themes/powerlevel10k/p10k.zsh" "$HOME/.p10k.zsh"
+    echo "[*] p10k.zsh copied to home directory."
+  else
+    echo "[*] p10k.zsh already exists in home directory. Skipping..."
+  fi
+
+  # Clone powerlevel10k theme if not already installed
+  if [ ! -d "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k" ]; then
+    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k"
+    echo "[*] powerlevel10k theme installed."
+  else
+    echo "[*] powerlevel10k theme already installed. Skipping..."
   fi
 
   # SSH config
@@ -105,10 +126,11 @@ common_setup() {
     echo "[!] Skipping SSH config copy — not found for $OS_TYPE."
   fi
 
+  EMAIL="3urdparty@gmail.com"
   # SSH key
   if [ ! -f "$SSH_KEY" ]; then
     echo "[*] Generating new SSH key for GitHub..."
-    ssh-keygen -t ed25519 -C "your_email@example.com" -f "$SSH_KEY" -N ""
+    ssh-keygen -t ed25519 -C "$EMAIL" -f "$SSH_KEY" -N ""
     eval "$(ssh-agent -s)"
     if [ "$OS_TYPE" = "macos" ]; then
       ssh-add --apple-use-keychain "$SSH_KEY"
