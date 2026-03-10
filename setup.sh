@@ -130,13 +130,61 @@ setup_ssh() {
   mkdir -p "$SSH_DIR"
   chmod 700 "$SSH_DIR"
 
+  CONFIG_FILE="$SSH_DIR/config"
+  touch "$CONFIG_FILE"
+  chmod 600 "$CONFIG_FILE"
+
+  # Generate SSH key if missing
   if [ ! -f "$SSH_KEY" ]; then
+    echo "Generating SSH key..."
     ssh-keygen -t ed25519 -C "$EMAIL" -f "$SSH_KEY" -N ""
     eval "$(ssh-agent -s)"
-    ssh-add "$SSH_KEY"
+
+    if [ "$OS_TYPE" = "macos" ]; then
+      ssh-add --apple-use-keychain "$SSH_KEY"
+    else
+      ssh-add "$SSH_KEY"
+    fi
+
     echo ""
     echo "Add this key to GitHub:"
     cat "$SSH_KEY.pub"
+    echo ""
+  else
+    echo "SSH key already exists."
+  fi
+
+  # -------- GitHub SSH Config -------- #
+  if ! grep -q "Host github.com" "$CONFIG_FILE"; then
+    echo "Adding GitHub SSH config..."
+
+    {
+      echo ""
+      echo "Host github.com"
+      echo "  HostName github.com"
+      echo "  User git"
+      echo "  IdentityFile $SSH_KEY"
+      echo "  AddKeysToAgent yes"
+      [ "$OS_TYPE" = "macos" ] && echo "  UseKeychain yes"
+    } >>"$CONFIG_FILE"
+  else
+    echo "GitHub SSH config already exists."
+  fi
+
+  # -------- Mac Machine Alias -------- #
+  # Lets you do: ssh mac
+  if ! grep -q "Host mac" "$CONFIG_FILE"; then
+    echo "Adding Mac host alias..."
+
+    {
+      echo ""
+      echo "Host mac"
+      echo "  HostName localhost"
+      echo "  User $USER"
+      echo "  IdentityFile $SSH_KEY"
+    } >>"$CONFIG_FILE"
+  else
+    echo "Mac host alias already exists."
   fi
 }
 
