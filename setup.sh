@@ -35,19 +35,19 @@ DOT="${DIM}·${RESET}"
 # -------- OS Detection -------- #
 detect_os() {
   case "$(uname)" in
-    Darwin) OS_TYPE="macos" ;;
-    Linux)
-      if grep -qi ubuntu /etc/os-release 2>/dev/null; then
-        OS_TYPE="ubuntu"
-      else
-        echo -e "${RED}Unsupported Linux distro.${RESET}"
-        exit 1
-      fi
-      ;;
-    *)
-      echo -e "${RED}Unsupported OS.${RESET}"
+  Darwin) OS_TYPE="macos" ;;
+  Linux)
+    if grep -qi ubuntu /etc/os-release 2>/dev/null; then
+      OS_TYPE="ubuntu"
+    else
+      echo -e "${RED}Unsupported Linux distro.${RESET}"
       exit 1
-      ;;
+    fi
+    ;;
+  *)
+    echo -e "${RED}Unsupported OS.${RESET}"
+    exit 1
+    ;;
   esac
 }
 
@@ -112,7 +112,7 @@ install_homebrew() {
   if ! command -v brew &>/dev/null; then
     log_step "Installing Homebrew..."
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> "$HOME/.zprofile"
+    echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >>"$HOME/.zprofile"
     eval "$(/opt/homebrew/bin/brew shellenv)"
     log_success "Homebrew installed"
   else
@@ -135,8 +135,22 @@ install_packages() {
   else
     log_step "Updating apt..."
     sudo apt update -qq
-    sudo apt install -y kitty zsh git curl wget &>/dev/null
+    sudo apt install -y zsh git curl wget xclip &>/dev/null
     log_success "apt packages installed"
+
+    log_step "Installing kitty..."
+    curl -L https://sw.kovidgoyal.net/kitty/installer.sh | sh /dev/stdin
+    mkdir -p ~/.local/bin ~/.local/share/applications ~/.config &&
+      ln -sf ~/.local/kitty.app/bin/kitty ~/.local/bin/kitty &&
+      ln -sf ~/.local/kitty.app/bin/kitten ~/.local/bin/kitten &&
+      cp ~/.local/kitty.app/share/applications/kitty.desktop ~/.local/share/applications/ &&
+      cp ~/.local/kitty.app/share/applications/kitty-open.desktop ~/.local/share/applications/ &&
+      sed -i "s|Icon=kitty|Icon=$(readlink -f ~)/.local/kitty.app/share/icons/hicolor/256x256/apps/kitty.png|g" ~/.local/share/applications/kitty*.desktop &&
+      sed -i "s|Exec=kitty|Exec=$(readlink -f ~)/.local/kitty.app/bin/kitty|g" ~/.local/share/applications/kitty*.desktop &&
+      echo 'kitty.desktop' >~/.config/xdg-terminals.list &&
+      update-desktop-database ~/.local/share/applications 2>/dev/null || true
+    log_success "kitty installed"
+
     log_step "Installing neovim via PPA..."
     sudo add-apt-repository ppa:neovim-ppa/unstable -y &>/dev/null
     sudo apt update -qq
@@ -258,7 +272,7 @@ setup_ssh() {
       echo "  IdentityFile $SSH_KEY"
       echo "  AddKeysToAgent yes"
       [ "$OS_TYPE" = "macos" ] && echo "  UseKeychain yes"
-    } >> "$config_file"
+    } >>"$config_file"
     log_success "GitHub SSH config added"
   else
     log_info "GitHub SSH config already exists"
@@ -272,7 +286,7 @@ setup_ssh() {
       echo "  HostName localhost"
       echo "  User $USER"
       echo "  IdentityFile $SSH_KEY"
-    } >> "$config_file"
+    } >>"$config_file"
     log_success "Mac host alias added"
   else
     log_info "Mac host alias already exists"
@@ -339,16 +353,19 @@ print_menu() {
 
 handle_choice() {
   case "$1" in
-    1) [ "$OS_TYPE" = "macos" ] && install_homebrew || echo -e "  ${YELLOW}Homebrew is macOS only${RESET}" ;;
-    2) install_packages ;;
-    3) install_ohmyzsh ;;
-    4) install_powerlevel10k ;;
-    5) install_plugins ;;
-    6) setup_configs ;;
-    7) setup_ssh ;;
-    8) install_all ;;
-    0) echo -e "\n  ${DIM}Bye!${RESET}\n"; exit 0 ;;
-    *) echo -e "\n  ${RED}Invalid option${RESET}" ;;
+  1) [ "$OS_TYPE" = "macos" ] && install_homebrew || echo -e "  ${YELLOW}Homebrew is macOS only${RESET}" ;;
+  2) install_packages ;;
+  3) install_ohmyzsh ;;
+  4) install_powerlevel10k ;;
+  5) install_plugins ;;
+  6) setup_configs ;;
+  7) setup_ssh ;;
+  8) install_all ;;
+  0)
+    echo -e "\n  ${DIM}Bye!${RESET}\n"
+    exit 0
+    ;;
+  *) echo -e "\n  ${RED}Invalid option${RESET}" ;;
   esac
 }
 
