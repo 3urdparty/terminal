@@ -1,0 +1,6 @@
+[submodule "kitty.config"]
+	path = kitty.config
+	url = git@github.com:3urdparty/kitty.config.git
+[submodule "nvim.config"]
+	path = nvim.config
+	url = git@github.com:3urdparty/nvim.config.git
