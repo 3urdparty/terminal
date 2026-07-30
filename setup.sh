@@ -36,12 +36,9 @@ DOT="${DIM}·${RESET}"
 
 BOOTSTRAP_DIR="$HOME/.terminal-setup"
 
-bootstrap_repo() {
-  # If we're already running from the cloned repo, don't recurse.
-  if [ -d ".git" ] && git remote get-url origin 2>/dev/null | grep -q "3urdparty/terminal"; then
-    return
-  fi
+# -------- Bootstrap Repository -------- #
 
+bootstrap_repo() {
   # Install Git if missing
   if ! command -v git >/dev/null 2>&1; then
     echo "Installing Git..."
@@ -49,6 +46,7 @@ bootstrap_repo() {
     case "$(uname)" in
       Darwin)
         xcode-select --install 2>/dev/null || true
+
         until command -v git >/dev/null 2>&1; do
           sleep 5
         done
@@ -65,16 +63,20 @@ bootstrap_repo() {
     esac
   fi
 
-  # Clone or update repository
-  if [ ! -d "$BOOTSTRAP_DIR/.git" ]; then
-    git clone --recurse-submodules "$REPO_CLONE_URL" "$BOOTSTRAP_DIR"
+  # Clone repository into /tmp
+  if [ ! -d "$TMP_DIR/.git" ]; then
+    echo "Cloning terminal repository..."
+    rm -rf "$TMP_DIR"
+
+    git clone "$REPO_CLONE_URL" "$TMP_DIR"
   else
-    git -C "$BOOTSTRAP_DIR" pull
-    git -C "$BOOTSTRAP_DIR" submodule update --init --recursive
+    echo "Updating terminal repository..."
+    git -C "$TMP_DIR" pull --quiet
   fi
 
-  # Execute the real installer
-  exec bash "$BOOTSTRAP_DIR/install.sh"
+  # Initialize submodules
+  echo "Initializing submodules..."
+  git -C "$TMP_DIR" submodule update --init --recursive
 }
 
 # -------- OS Detection -------- #
