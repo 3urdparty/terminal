@@ -32,6 +32,51 @@ CROSS="${RED}✘${RESET}"
 ARROW="${CYAN}❯${RESET}"
 DOT="${DIM}·${RESET}"
 
+# -------- Bootstrap Repository -------- #
+
+BOOTSTRAP_DIR="$HOME/.terminal-setup"
+
+bootstrap_repo() {
+  # If we're already running from the cloned repo, don't recurse.
+  if [ -d ".git" ] && git remote get-url origin 2>/dev/null | grep -q "3urdparty/terminal"; then
+    return
+  fi
+
+  # Install Git if missing
+  if ! command -v git >/dev/null 2>&1; then
+    echo "Installing Git..."
+
+    case "$(uname)" in
+      Darwin)
+        xcode-select --install 2>/dev/null || true
+        until command -v git >/dev/null 2>&1; do
+          sleep 5
+        done
+        ;;
+      Linux)
+        if command -v apt >/dev/null 2>&1; then
+          sudo apt update
+          sudo apt install -y git
+        else
+          echo "Unsupported package manager."
+          exit 1
+        fi
+        ;;
+    esac
+  fi
+
+  # Clone or update repository
+  if [ ! -d "$BOOTSTRAP_DIR/.git" ]; then
+    git clone --recurse-submodules "$REPO_CLONE_URL" "$BOOTSTRAP_DIR"
+  else
+    git -C "$BOOTSTRAP_DIR" pull
+    git -C "$BOOTSTRAP_DIR" submodule update --init --recursive
+  fi
+
+  # Execute the real installer
+  exec bash "$BOOTSTRAP_DIR/install.sh"
+}
+
 # -------- OS Detection -------- #
 detect_os() {
   case "$(uname)" in
@@ -370,7 +415,7 @@ handle_choice() {
 }
 
 # -------- Main -------- #
-
+bootstrap_repo
 detect_os
 
 while true; do
