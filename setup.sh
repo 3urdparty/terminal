@@ -260,11 +260,11 @@ setup_configs() {
   mkdir -p "$CONFIG_DIR/nvim"
 
   log_step "Copying kitty config..."
-  cp -r "$TMP_DIR/kitty/." "$CONFIG_DIR/kitty/"
+  cp -r "$TMP_DIR/kitty.config/." "$CONFIG_DIR/kitty/"
   log_success "kitty config installed"
 
   log_step "Copying nvim config..."
-  cp -r "$TMP_DIR/nvim/." "$CONFIG_DIR/nvim/"
+  cp -r "$TMP_DIR/nvim.config/." "$CONFIG_DIR/nvim/"
   log_success "nvim config installed"
 
   log_step "Copying .zshrc..."
