@@ -2,5 +2,5 @@
 
 To install.
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/<owner>/<repo>/main/setup.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/3urdparty/terminal/main/setup.sh)
 ```
